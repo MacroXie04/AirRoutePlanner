@@ -1,143 +1,121 @@
 # ========================================================================================= #
-#  C++ Project Makefile      														        #
-#  Angelo Kyrilov                      														#
+#  Makefile       											                    			#
+#  Hongzhe Xie                      														#
+#  CSE 030 Data Structure 															   		#
 #  University of California, Merced    												   		#
 # ========================================================================================= #
 
 # ===================================== PROJECT CONFIG ==================================== #
+SRC_DIR      := src
+TEST_DIR     := test
+OBJ_DIR      := objects
+LOCAL_BIN    := bin
+APP          := app
+MAIN         := main
+TEST         := test
+HEADERS      := $(shell find $(SRC_DIR) -name '*.h')
+SRC          := $(shell find $(SRC_DIR) -name '*.cpp')
+OBJ          := $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+TEST_SRC     := $(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJ     := $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/test/%.o)
+LOCAL_BIN_DIR:= $(LOCAL_BIN)
+BIN_DIR      := $(LOCAL_BIN)
+OUT          := $(BIN_DIR)/$(APP)
+TEST_OUT     := $(BIN_DIR)/$(TEST)
+DB_FILE      := db/data.db
+DB_SEED      := db/seed.sql
 
-SRC_DIR = src
-HEADERS_DIR = inc
-TEST_DIR = test
+MAKEFLAGS   += --no-print-directory
 
-OBJ_DIR = objects
-BIN_DIR = bin
-
-APP = app
-MAIN = main
-TEST = test
-
-# =================================== COMPILER SETTINGS =================================== #
-
-CXX = g++
-
-ifeq ($(filter autograde,$(MAKECMDGOALS)),autograde)
-CXXFLAGS = -Wall -Wextra -Werror -I$(HEADERS_DIR)
+# ================================ PLATFORM DETECTION ====================================== #
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  # macOS
+  CXX        := clang++
+  CXXFLAGS   := -Wall `fltk-config --cxxflags` -std=c++17 -DGL_SILENCE_DEPRECATION -I. -Iinc -Ibobcat_ui -Iigloo
+  GLFLAGS    := -framework OpenGL
+  LDFLAGS    := `fltk-config --ldflags` -lfltk_gl -lfltk_images $(GLFLAGS) -lsqlite3
 else
-CXXFLAGS = -Wall -I$(HEADERS_DIR)
+  # assume Linux
+  CXX        := g++
+  CXXFLAGS   := -Wall `fltk-config --cxxflags` -std=c++17 -I.
+  GLFLAGS    := -lGL -lGLU
+  LDFLAGS    := `fltk-config --use-gl --use-images --ldflags` $(GLFLAGS) -lsqlite3
 endif
 
-
-LDFLAGS = -lfltk_images -lpng -lz -lfltk_gl -lGLU -lGL -lfltk -lXrender \
-          -lXext -lXft -lfontconfig -lpthread -ldl -lm -lX11
-
-MAKEFLAGS += --no-print-directory
-
-# ==================================== BANNED HEADERS ===================================== #
-
-NOT_ALLOWED = stl_vector|stl_list|stl_deque|std_stack|stl_queue|stl_set|stl_map|unordered_map|unordered_set|stl_algo.h
-EXCLUDE = 
-
-# ======================================== TARGETS ======================================== #
-
-SRC = $(wildcard $(SRC_DIR)/*.cpp)
-OBJ = $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-OUT = $(BIN_DIR)/$(APP)
-
-TEST_SRC = $(wildcard $(TEST_DIR)/*.cpp)
-TEST_OBJ = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-TEST_OUT = $(BIN_DIR)/$(TEST)
-
-HEADERS = $(wildcard $(HEADERS_DIR)/*.h)
+# ==================================== RULES ================================================ #
 
 all: $(OUT)
 
-$(OUT): $(OBJ) $(BIN_DIR) check-banned-headers
-	$(CXX) $(CXXFLAGS) $(OBJ) -o $(OUT) $(LDFLAGS)
+$(OUT): $(OBJ) | $(OBJ_DIR) $(LOCAL_BIN_DIR)
+	$(CXX) $(OBJ) -o $(OUT) $(LDFLAGS)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(OBJ_DIR) $(HEADERS)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJ_DIR):
-	@mkdir -p $(OBJ_DIR)
+	mkdir -p $(OBJ_DIR)
 
-$(BIN_DIR):
-	@mkdir -p $(BIN_DIR)
+$(LOCAL_BIN_DIR):
+	mkdir -p $(LOCAL_BIN_DIR)
 
+run: all
+	@if [ ! -f $(DB_FILE) ]; then \
+		echo "Database not found at $(DB_FILE)."; \
+		read -p "Do you want to create a new database? [y/N] " answer; \
+		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+			sqlite3 $(DB_FILE) < $(DB_SEED); \
+			echo "Database initialized at $(DB_FILE)"; \
+		else \
+			echo "Cannot run without database. Exiting."; \
+			exit 1; \
+		fi; \
+	fi
+	@if command -v clear >/dev/null 2>&1 && [ -n "$$TERM" ] && [ "$$TERM" != "dumb" ]; then clear; fi
+	@$(LOCAL_BIN_DIR)/$(APP)
 
-run: $(OUT)
-	@clear
-	@$(BIN_DIR)/$(APP)
+init_db:
+	@if [ -f $(DB_FILE) ]; then \
+		read -p "Database already exists. Do you want to overwrite it? [y/N] " answer; \
+		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+			rm -f $(DB_FILE); \
+			sqlite3 $(DB_FILE) < $(DB_SEED); \
+			echo "Database initialized at $(DB_FILE)"; \
+		else \
+			echo "Operation cancelled."; \
+		fi; \
+	else \
+		sqlite3 $(DB_FILE) < $(DB_SEED); \
+		echo "Database initialized at $(DB_FILE)"; \
+	fi
 
-test: $(OBJ) $(TEST_OBJ) $(BIN_DIR) check-banned-headers
-	$(CXX) $(CXXFLAGS) $(filter-out $(OBJ_DIR)/$(MAIN).o, $(OBJ)) $(TEST_OBJ) -o $(TEST_OUT) $(LDFLAGS)
-	@clear
-	@$(BIN_DIR)/$(TEST) --output=color || true
+$(TEST_OUT): $(OBJ) $(TEST_OBJ) | $(BIN_DIR) $(LOCAL_BIN_DIR)
+	$(CXX) $(filter-out $(OBJ_DIR)/$(MAIN).o,$(OBJ)) $(TEST_OBJ) -o $(TEST_OUT) $(LDFLAGS)
 
-autograde: clean $(OBJ) $(TEST_OBJ) $(BIN_DIR) check-banned-headers
-	@$(CXX) $(CXXFLAGS) $(filter-out $(OBJ_DIR)/$(MAIN).o, $(OBJ)) $(TEST_OBJ) -o $(TEST_OUT) $(LDFLAGS)
-	@xvfb-run $(BIN_DIR)/$(TEST) || true
+test: $(TEST_OUT)
+	$(LOCAL_BIN_DIR)/$(TEST) --output=color || true
 
-$(OBJ_DIR)/$(TEST).o: $(TEST_DIR)/$(TEST).cpp $(HEADERS)
-	$(CXX) $(CXXFLAGS) -c $(TEST_DIR)/$(TEST).cpp -o $(OBJ_DIR)/$(TEST).o
+autograde: clean $(TEST_OUT)
+	xvfb-run $(LOCAL_BIN_DIR)/$(TEST) || true
+
+$(OBJ_DIR)/test/%.o: $(TEST_DIR)/%.cpp | $(OBJ_DIR)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	@rm -f $(BIN_DIR)/$(APP) $(OBJ) $(BIN_DIR)/$(TEST) $(TEST_OBJ)
-	@rmdir $(BIN_DIR) $(OBJ_DIR) 2> /dev/null || true
-	@echo Project folder clean
+	rm -f $(LOCAL_BIN_DIR)/$(APP) $(LOCAL_BIN_DIR)/$(TEST)
+	rm -rf $(OBJ_DIR)
+	rmdir $(LOCAL_BIN_DIR) 2> /dev/null || true
+	rm -f $(DB_FILE)
 
-check-banned-headers:
-	@echo "🔍  Scanning files for banned headers..."
-	@violations=0; \
-	for file in $(SRC); do \
-		skip=0; \
-		for excluded in $(EXCLUDE); do \
-			if [ "$$file" = "$$excluded" ]; then \
-				skip=1; \
-				break; \
-			fi; \
-		done; \
-		if [ $$skip -eq 1 ]; then \
-			echo "⚠️  Skipping excluded file: $$file"; \
-			continue; \
-		fi; \
-		echo "➡️  Checking $$file..."; \
-		if [ -n "$(NOT_ALLOWED)" ]; then \
-			deps=$$($(CXX) $(CXXFLAGS) -M $$file | grep -E '$(NOT_ALLOWED)'); \
-		else \
-			deps=""; \
-		fi; \
-		if [ -n "$$deps" ]; then \
-			echo "❌  Banned headers found in $$file:"; \
-			echo "$$deps"; \
-			violations=1; \
-		else \
-			echo "✅. No banned headers in $$file."; \
-		fi; \
-	done; \
-	if [ $$violations -ne 0 ]; then \
-		echo ""; \
-		echo "🚫  Build failed: Banned headers detected."; \
-		exit 1; \
-	else \
-		echo ""; \
-		echo "🎉  All files are clean!"; \
-	fi
+.PHONY: all run test autograde clean lint memcheck format init_db
 
-pull:
-	@if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then \
-		if [ -n "$$(git status --porcelain)" ]; then \
-			printf "⚠️  \033[31m\033[1mWARNING:\033[0m This action will discard your changes.\n"; \
-			read -p "Do you want to continue? [y/N]: " ans && [ "$$ans" = y ] && { \
-				git reset --hard && \
-				git clean -fdx && \
-				git pull --ff-only; \
-			} || echo "Aborted."; \
-		else \
-			git pull --ff-only; \
-		fi \
-	else \
-		printf "🚫  \033[31m\033[1mERROR:\033[0m Not a git repository.\n"; \
-	fi
+lint:
+	clang-format --dry-run --Werror $(SRC) $(HEADERS) $(TEST_SRC)
 
-.PHONY: run pull test autograde clean check-banned-headers
+format:
+	clang-format -i $(SRC) $(HEADERS) $(TEST_SRC)
+
+memcheck: $(TEST_OUT)
+	valgrind --leak-check=full --error-exitcode=1 $(TEST_OUT)

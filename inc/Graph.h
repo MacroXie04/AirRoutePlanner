@@ -10,13 +10,21 @@
 #include <ostream>
 #include <string>
 
+enum SearchCriteria { CHEAPEST, FASTEST, LEAST_STOPS };
+
 struct Edge;
 
 struct Vertex {
     std::string data;
     ArrayList<Edge *> edgeList;
+    int x;
+    int y;
 
-    Vertex(std::string data) { this->data = data; }
+    Vertex(std::string data, int x = 0, int y = 0) { 
+        this->data = data; 
+        this->x = x;
+        this->y = y;
+    }
 };
 
 inline std::ostream &operator<<(std::ostream &os, Vertex *v) {
@@ -28,17 +36,30 @@ inline std::ostream &operator<<(std::ostream &os, Vertex *v) {
 struct Edge {
     Vertex *from;
     Vertex *to;
-    int weight;
+    int weight; // Kept for compatibility, though we use cost/duration
+    int cost;
+    int duration;
 
+    Edge(Vertex *from, Vertex *to, int cost, int duration) {
+        this->from = from;
+        this->to = to;
+        this->cost = cost;
+        this->duration = duration;
+        this->weight = cost; // Default weight to cost
+    }
+    
+    // Legacy constructor compatibility
     Edge(Vertex *from, Vertex *to, int weight) {
         this->from = from;
         this->to = to;
         this->weight = weight;
+        this->cost = weight;
+        this->duration = 0;
     }
 };
 
 inline std::ostream &operator<<(std::ostream &os, Edge *e) {
-    os << "(" << e->from << ", " << e->to << ") - " << e->weight;
+    os << "(" << e->from << ", " << e->to << ") - $" << e->cost << ", " << e->duration << "m";
 
     return os;
 }
@@ -49,20 +70,43 @@ struct Waypoint {
     ArrayList<Waypoint *> children;
     int partialCost;
     int weight;
+    
+    // New fields
+    int totalCost;
+    int totalTime;
+    int stops;
 
     Waypoint(Vertex *v) {
         parent = nullptr;
         vertex = v;
         weight = 0;
         partialCost = 0;
+        totalCost = 0;
+        totalTime = 0;
+        stops = 0;
     }
 
-    void expand() {
+    void expand(SearchCriteria criteria = CHEAPEST) {
         for (int i = 0; i < vertex->edgeList.size(); i++) {
-            Waypoint *temp = new Waypoint(vertex->edgeList[i]->to);
+            Edge* e = vertex->edgeList[i];
+            Waypoint *temp = new Waypoint(e->to);
             temp->parent = this;
-            temp->weight = vertex->edgeList[i]->weight;
-            temp->partialCost = partialCost + vertex->edgeList[i]->weight;
+            
+            temp->totalCost = totalCost + e->cost;
+            temp->totalTime = totalTime + e->duration;
+            temp->stops = stops + 1;
+            
+            // Set partial cost based on criteria
+            if (criteria == CHEAPEST) {
+                temp->partialCost = temp->totalCost;
+            } else if (criteria == FASTEST) {
+                temp->partialCost = temp->totalTime;
+            } else { // LEAST_STOPS
+                temp->partialCost = temp->stops;
+            }
+            
+            temp->weight = e->weight;
+
             children.append(temp);
         }
     }
@@ -84,13 +128,18 @@ struct Graph {
 
     void addVertex(Vertex *v) { vertices.append(v); }
 
-    void addEdge(Vertex *x, Vertex *y, int w) {
-        x->edgeList.append(new Edge(x, y, w));
-        y->edgeList.append(new Edge(y, x, w));
+    void addEdge(Vertex *x, Vertex *y, int cost, int duration) {
+        x->edgeList.append(new Edge(x, y, cost, duration));
+        y->edgeList.append(new Edge(y, x, cost, duration));
     }
 
-    void addDirectedEdge(Vertex *x, Vertex *y, int w) {
-        x->edgeList.append(new Edge(x, y, w));
+    void addDirectedEdge(Vertex *x, Vertex *y, int cost, int duration) {
+        x->edgeList.append(new Edge(x, y, cost, duration));
+    }
+    
+    // Legacy support
+    void addEdge(Vertex *x, Vertex *y, int w) {
+        addEdge(x, y, w, 0);
     }
 
     Waypoint *bfs(Vertex *start, Vertex *destination) {
@@ -207,8 +256,8 @@ struct Graph {
         return nullptr;
     }
 
-    Waypoint *ucs(Vertex *start, Vertex *destination) {
-        std::cout << "Running Uniform Cost Search" << std::endl;
+    Waypoint *search(Vertex *start, Vertex *destination, SearchCriteria criteria) {
+        std::cout << "Running Search (UCS variant)" << std::endl;
 
         // Should be a priority queue
         ArrayList<Waypoint *> frontier;
@@ -228,7 +277,7 @@ struct Graph {
                 return result;
             }
 
-            result->expand();
+            result->expand(criteria);
 
             std::cout << "Expanding " << result->vertex->data << std::endl;
 
@@ -331,6 +380,11 @@ struct Graph {
         }
 
         return nullptr;
+    }
+
+    // Keep legacy UCS for compatibility if needed, but it calls search with default
+    Waypoint *ucs(Vertex *start, Vertex *destination) {
+        return search(start, destination, CHEAPEST);
     }
 };
 

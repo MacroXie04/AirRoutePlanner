@@ -6,44 +6,6 @@
 
 using namespace igloo;
 
-// Helper function to delete a Waypoint and its entire tree (parent chain and children)
-inline void deleteWaypointTree(Waypoint* wp) {
-    if (wp == nullptr) return;
-    
-    // Delete all children recursively
-    for (int i = 0; i < wp->children.size(); i++) {
-        deleteWaypointTree(wp->children[i]);
-    }
-    
-    delete wp;
-}
-
-// Helper to find and delete the root of a Waypoint tree
-inline void deleteWaypointFromResult(Waypoint* result) {
-    if (result == nullptr) return;
-    
-    // Find the root (topmost parent)
-    Waypoint* root = result;
-    while (root->parent != nullptr) {
-        root = root->parent;
-    }
-    
-    // Delete entire tree from root
-    deleteWaypointTree(root);
-}
-
-// Helper to clean up a Graph's vertices and edges
-inline void cleanupGraph(Graph& g) {
-    for (int i = 0; i < g.vertices.size(); i++) {
-        Vertex* v = g.vertices[i];
-        // Delete all edges from this vertex
-        for (int j = 0; j < v->edgeList.size(); j++) {
-            delete v->edgeList[j];
-        }
-        delete v;
-    }
-}
-
 // =============================================================================
 // Graph Search Tests
 // Tests for graph pathfinding with different optimization criteria
@@ -82,10 +44,6 @@ Context(GraphTests) {
         // Path 1 (A->B->C): Total Cost 20, Total Time 40, Stops 2
         // Path 2 (A->D->C): Total Cost 100, Total Time 10, Stops 2
     }
-    
-    void TearDown() {
-        cleanupGraph(g);
-    }
 
     Spec(CheapestPath) {
         Waypoint* result = g.search(v1, v3, CHEAPEST);
@@ -96,7 +54,6 @@ Context(GraphTests) {
         // Verify path is A -> B -> C
         Assert::That(result->parent->vertex->data, Equals("B"));
         Assert::That(result->parent->parent->vertex->data, Equals("A"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(FastestPath) {
@@ -107,7 +64,6 @@ Context(GraphTests) {
         // Verify path is A -> D -> C
         Assert::That(result->parent->vertex->data, Equals("D"));
         Assert::That(result->parent->parent->vertex->data, Equals("A"));
-        deleteWaypointFromResult(result);
     }
     
     Spec(LeastStops) {
@@ -121,7 +77,6 @@ Context(GraphTests) {
         
         // Verify path is A -> C
         Assert::That(result->parent->vertex->data, Equals("A"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(NoPath) {
@@ -163,16 +118,11 @@ Context(GraphBFSTests) {
         g.addDirectedEdge(v1, v4, 50, 5);
         g.addDirectedEdge(v4, v3, 50, 5);
     }
-    
-    void TearDown() {
-        cleanupGraph(g);
-    }
 
     Spec(BFSFindsPath) {
         Waypoint* result = g.bfs(v1, v3);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("C"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(BFSFindsDirectNeighbor) {
@@ -180,7 +130,6 @@ Context(GraphBFSTests) {
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("B"));
         Assert::That(result->parent->vertex->data, Equals("A"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(BFSNoPath) {
@@ -188,14 +137,12 @@ Context(GraphBFSTests) {
         g.addVertex(isolated);
         Waypoint* result = g.bfs(v1, isolated);
         Assert::That(result, IsNull());
-        // Note: isolated vertex is cleaned up by TearDown via cleanupGraph
     }
 
     Spec(BFSSameStartEnd) {
         Waypoint* result = g.bfs(v1, v1);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("A"));
-        deleteWaypointFromResult(result);
     }
 };
 
@@ -227,23 +174,17 @@ Context(GraphDFSTests) {
         g.addDirectedEdge(v1, v4, 50, 5);
         g.addDirectedEdge(v4, v3, 50, 5);
     }
-    
-    void TearDown() {
-        cleanupGraph(g);
-    }
 
     Spec(DFSFindsPath) {
         Waypoint* result = g.dfs(v1, v3);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("C"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(DFSFindsDirectNeighbor) {
         Waypoint* result = g.dfs(v1, v2);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("B"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(DFSNoPath) {
@@ -251,14 +192,12 @@ Context(GraphDFSTests) {
         g.addVertex(isolated);
         Waypoint* result = g.dfs(v1, isolated);
         Assert::That(result, IsNull());
-        // Note: isolated vertex is cleaned up by TearDown via cleanupGraph
     }
 
     Spec(DFSSameStartEnd) {
         Waypoint* result = g.dfs(v1, v1);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("A"));
-        deleteWaypointFromResult(result);
     }
 };
 
@@ -326,8 +265,6 @@ Context(GraphEdgeCases) {
         Assert::That(v1->edgeList[0]->to->data, Equals("B"));
         // Edge from B to A
         Assert::That(v2->edgeList[0]->to->data, Equals("A"));
-        
-        cleanupGraph(g);
     }
 
     Spec(LegacyUCS) {
@@ -341,9 +278,6 @@ Context(GraphEdgeCases) {
         Waypoint* result = g.ucs(v1, v2);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("B"));
-        
-        deleteWaypointFromResult(result);
-        cleanupGraph(g);
     }
 };
 
@@ -388,17 +322,12 @@ Context(ComplexGraphTests) {
         // NYC -> LAX: $500, 5hr (direct, most expensive)
         g.addDirectedEdge(nyc, lax, 500, 300);
     }
-    
-    void TearDown() {
-        cleanupGraph(g);
-    }
 
     Spec(CheapestNYCtoLAX) {
         // Cheapest: NYC -> ORD -> DEN -> LAX = $150 + $100 + $120 = $370
         Waypoint* result = g.search(nyc, lax, CHEAPEST);
         Assert::That(result != nullptr);
         Assert::That(result->totalCost, Equals(370));
-        deleteWaypointFromResult(result);
     }
 
     Spec(FastestNYCtoLAX) {
@@ -407,7 +336,6 @@ Context(ComplexGraphTests) {
         Waypoint* result = g.search(nyc, lax, FASTEST);
         Assert::That(result != nullptr);
         Assert::That(result->totalTime, Equals(300));
-        deleteWaypointFromResult(result);
     }
 
     Spec(LeastStopsNYCtoLAX) {
@@ -416,7 +344,6 @@ Context(ComplexGraphTests) {
         Assert::That(result != nullptr);
         Assert::That(result->stops, Equals(1));
         Assert::That(result->parent->vertex->data, Equals("NYC"));
-        deleteWaypointFromResult(result);
     }
 
     Spec(MultipleVertices) {

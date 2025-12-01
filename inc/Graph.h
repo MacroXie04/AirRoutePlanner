@@ -142,22 +142,12 @@ struct Graph {
         addEdge(x, y, w, 0);
     }
 
-    // Helper to delete entire waypoint tree from root
-    void deleteWaypointTree(Waypoint* wp) {
-        if (wp == nullptr) return;
-        for (int i = 0; i < wp->children.size(); i++) {
-            deleteWaypointTree(wp->children[i]);
-        }
-        delete wp;
-    }
-
     Waypoint *bfs(Vertex *start, Vertex *destination) {
         std::cout << "Running Breadth-First Search" << std::endl;
         Queue<Waypoint *> frontier;
         HashTable<std::string> seen;
 
         Waypoint *first = new Waypoint(start);
-        Waypoint *root = first; // Keep track of root for cleanup
 
         frontier.enqueue(first);
         seen.insert(first->vertex->data);
@@ -209,8 +199,6 @@ struct Graph {
             std::cout << std::endl;
         }
 
-        // No path found - clean up the waypoint tree
-        deleteWaypointTree(root);
         return nullptr;
     }
 
@@ -221,7 +209,6 @@ struct Graph {
         HashTable<std::string> seen;
 
         Waypoint *first = new Waypoint(start);
-        Waypoint *root = first; // Keep track of root for cleanup
 
         frontier.push(first);
         seen.insert(first->vertex->data);
@@ -266,8 +253,6 @@ struct Graph {
             std::cout << std::endl;
         }
 
-        // No path found - clean up the waypoint tree
-        deleteWaypointTree(root);
         return nullptr;
     }
 
@@ -279,7 +264,6 @@ struct Graph {
         HashTable<std::string> seen;
 
         Waypoint *first = new Waypoint(start);
-        Waypoint *root = first; // Keep track of root for cleanup
 
         frontier.append(first);
         seen.insert(first->vertex->data);
@@ -395,8 +379,6 @@ struct Graph {
             std::cout << std::endl;
         }
 
-        // No path found - clean up the waypoint tree
-        deleteWaypointTree(root);
         return nullptr;
     }
 

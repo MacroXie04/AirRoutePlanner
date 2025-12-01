@@ -25,7 +25,7 @@ int main() {
   Application_ app;
 
   // Main Window - wider to accommodate management panel
-  Window *win = new Window(1280, 700, "Air Route Planner");
+  bobcat::Window *win = new bobcat::Window(1280, 700, "Air Route Planner");
 
   // --- LEFT PANEL: ROUTE PLANNER ---
   Group *controls = new Group(10, 10, 280, 680);

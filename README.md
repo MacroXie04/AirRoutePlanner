@@ -142,7 +142,3 @@ Routes are designed to demonstrate different optimization scenarios:
 | `make test` | Run unit tests |
 | `make lint` | Check code formatting |
 | `make format` | Auto-format source code |
-
-## License
-
-This project was developed for CSE 030 Data Structures at University of California, Merced.

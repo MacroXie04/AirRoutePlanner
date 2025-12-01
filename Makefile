@@ -38,7 +38,7 @@ ifeq ($(UNAME_S),Darwin)
 else
   # assume Linux
   CXX        := g++
-  CXXFLAGS   := -Wall `fltk-config --cxxflags` -std=c++17 -I.
+  CXXFLAGS   := -Wall `fltk-config --cxxflags` -std=c++17 -I. -Iinc -Ibobcat_ui -Iigloo
   GLFLAGS    := -lGL -lGLU
   LDFLAGS    := `fltk-config --use-gl --use-images --ldflags` $(GLFLAGS) -lsqlite3
 endif

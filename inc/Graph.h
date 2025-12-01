@@ -25,6 +25,8 @@ struct Vertex {
         this->x = x;
         this->y = y;
     }
+
+    ~Vertex();
 };
 
 inline std::ostream &operator<<(std::ostream &os, Vertex *v) {
@@ -64,6 +66,12 @@ inline std::ostream &operator<<(std::ostream &os, Edge *e) {
     return os;
 }
 
+inline Vertex::~Vertex() {
+    for (int i = 0; i < edgeList.size(); i++) {
+        delete edgeList[i];
+    }
+}
+
 struct Waypoint {
     Waypoint *parent;
     Vertex *vertex;
@@ -75,6 +83,7 @@ struct Waypoint {
     int totalCost;
     int totalTime;
     int stops;
+    bool keep;
 
     Waypoint(Vertex *v) {
         parent = nullptr;
@@ -84,6 +93,7 @@ struct Waypoint {
         totalCost = 0;
         totalTime = 0;
         stops = 0;
+        keep = false;
     }
 
     void expand(SearchCriteria criteria = CHEAPEST) {
@@ -126,6 +136,12 @@ inline std::ostream &operator<<(std::ostream &os, Waypoint *wp) {
 struct Graph {
     ArrayList<Vertex *> vertices;
 
+    ~Graph() {
+        for (int i = 0; i < vertices.size(); i++) {
+            delete vertices[i];
+        }
+    }
+
     void addVertex(Vertex *v) { vertices.append(v); }
 
     void addEdge(Vertex *x, Vertex *y, int cost, int duration) {
@@ -146,8 +162,10 @@ struct Graph {
         std::cout << "Running Breadth-First Search" << std::endl;
         Queue<Waypoint *> frontier;
         HashTable<std::string> seen;
+        ArrayList<Waypoint *> allWaypoints;
 
         Waypoint *first = new Waypoint(start);
+        allWaypoints.append(first);
 
         frontier.enqueue(first);
         seen.insert(first->vertex->data);
@@ -158,10 +176,23 @@ struct Graph {
             result = frontier.dequeue();
 
             if (result->vertex == destination) {
+                Waypoint *curr = result;
+                while (curr != nullptr) {
+                    curr->keep = true;
+                    curr = curr->parent;
+                }
+                for (int i = 0; i < allWaypoints.size(); i++) {
+                    if (!allWaypoints[i]->keep) {
+                        delete allWaypoints[i];
+                    }
+                }
                 return result;
             }
 
             result->expand();
+            for (int i = 0; i < result->children.size(); i++) {
+                allWaypoints.append(result->children[i]);
+            }
             // Get the neighbors of the current vertex
             // that we are on...
 
@@ -199,6 +230,10 @@ struct Graph {
             std::cout << std::endl;
         }
 
+        for (int i = 0; i < allWaypoints.size(); i++) {
+            delete allWaypoints[i];
+        }
+
         return nullptr;
     }
 
@@ -207,8 +242,10 @@ struct Graph {
 
         Stack<Waypoint *> frontier;
         HashTable<std::string> seen;
+        ArrayList<Waypoint *> allWaypoints;
 
         Waypoint *first = new Waypoint(start);
+        allWaypoints.append(first);
 
         frontier.push(first);
         seen.insert(first->vertex->data);
@@ -219,10 +256,23 @@ struct Graph {
             result = frontier.pop();
 
             if (result->vertex == destination) {
+                Waypoint *curr = result;
+                while (curr != nullptr) {
+                    curr->keep = true;
+                    curr = curr->parent;
+                }
+                for (int i = 0; i < allWaypoints.size(); i++) {
+                    if (!allWaypoints[i]->keep) {
+                        delete allWaypoints[i];
+                    }
+                }
                 return result;
             }
 
             result->expand();
+            for (int i = 0; i < result->children.size(); i++) {
+                allWaypoints.append(result->children[i]);
+            }
 
             std::cout << std::endl
                       << "Expanding " << result->vertex->data << std::endl;
@@ -253,6 +303,10 @@ struct Graph {
             std::cout << std::endl;
         }
 
+        for (int i = 0; i < allWaypoints.size(); i++) {
+            delete allWaypoints[i];
+        }
+
         return nullptr;
     }
 
@@ -262,8 +316,10 @@ struct Graph {
         // Should be a priority queue
         ArrayList<Waypoint *> frontier;
         HashTable<std::string> seen;
+        ArrayList<Waypoint *> allWaypoints;
 
         Waypoint *first = new Waypoint(start);
+        allWaypoints.append(first);
 
         frontier.append(first);
         seen.insert(first->vertex->data);
@@ -274,10 +330,23 @@ struct Graph {
             result = frontier.removeLast();
 
             if (result->vertex == destination) {
+                Waypoint *curr = result;
+                while (curr != nullptr) {
+                    curr->keep = true;
+                    curr = curr->parent;
+                }
+                for (int i = 0; i < allWaypoints.size(); i++) {
+                    if (!allWaypoints[i]->keep) {
+                        delete allWaypoints[i];
+                    }
+                }
                 return result;
             }
 
             result->expand(criteria);
+            for (int i = 0; i < result->children.size(); i++) {
+                allWaypoints.append(result->children[i]);
+            }
 
             std::cout << "Expanding " << result->vertex->data << std::endl;
 
@@ -343,7 +412,7 @@ struct Graph {
                         for (int k = 0; k < frontier.size(); k++) {
                             if (frontier[k]->vertex->data ==
                                 result->children[i]->vertex->data) {
-                                delete frontier[k];
+                                // delete frontier[k];
                                 frontier[k] = result->children[i];
                                 break;
                             }
@@ -377,6 +446,10 @@ struct Graph {
                 }
             }
             std::cout << std::endl;
+        }
+
+        for (int i = 0; i < allWaypoints.size(); i++) {
+            delete allWaypoints[i];
         }
 
         return nullptr;

@@ -62,15 +62,9 @@ $(LOCAL_BIN_DIR):
 
 run: all
 	@if [ ! -f $(DB_FILE) ]; then \
-		echo "Database not found at $(DB_FILE)."; \
-		read -p "Do you want to create a new database? [y/N] " answer; \
-		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
-			sqlite3 $(DB_FILE) < $(DB_SEED); \
-			echo "Database initialized at $(DB_FILE)"; \
-		else \
-			echo "Cannot run without database. Exiting."; \
-			exit 1; \
-		fi; \
+		echo "Database not found at $(DB_FILE). Creating..."; \
+		sqlite3 $(DB_FILE) < $(DB_SEED); \
+		echo "Database initialized at $(DB_FILE)"; \
 	fi
 	@if command -v clear >/dev/null 2>&1 && [ -n "$$TERM" ] && [ "$$TERM" != "dumb" ]; then clear; fi
 	@$(LOCAL_BIN_DIR)/$(APP)

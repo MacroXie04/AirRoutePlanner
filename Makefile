@@ -111,6 +111,8 @@ clean:
 
 .PHONY: all run test autograde clean lint memcheck format init_db
 
+# CI trigger: igloo submodule fix
+
 lint:
 	clang-format --dry-run --Werror $(SRC) $(HEADERS) $(TEST_SRC)
 

@@ -43,7 +43,7 @@ void setupFindRouteCallback(Button *findBtn, Dropdown *fromDd, Dropdown *toDd,
       break;
     }
 
-    Waypoint *result = g.search(start, end, criteria);
+    std::shared_ptr<Waypoint> result = g.search(start, end, criteria);
     currentPath = result; // Store for drawing
     mapCanvas->redraw();  // Trigger redraw
 
@@ -61,10 +61,10 @@ void setupFindRouteCallback(Button *findBtn, Dropdown *fromDd, Dropdown *toDd,
 
       // Reconstruct path
       ArrayList<Waypoint *> path;
-      Waypoint *curr = result;
+      Waypoint *curr = result.get();
       while (curr != nullptr) {
         path.append(curr);
-        curr = curr->parent;
+        curr = curr->parent.get();
       }
 
       // Print segments

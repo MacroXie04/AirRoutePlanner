@@ -9,7 +9,7 @@ std::map<int, Vertex *> airportMap;
 std::vector<AirportData> dbAirports;
 std::vector<RouteData> dbRoutes;
 DatabaseManager db("db/data.db");
-Waypoint *currentPath = nullptr;
+std::shared_ptr<Waypoint> currentPath = nullptr;
 
 // UI components
 Dropdown *fromDd = nullptr;

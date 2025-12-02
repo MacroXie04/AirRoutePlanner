@@ -40,11 +40,11 @@ public:
     if (currentPath) {
       fl_color(FL_RED);
       fl_line_style(FL_SOLID, 3);
-      Waypoint *curr = currentPath;
+      Waypoint *curr = currentPath.get();
       while (curr && curr->parent) {
         fl_line(ox + curr->vertex->x, oy + curr->vertex->y,
                 ox + curr->parent->vertex->x, oy + curr->parent->vertex->y);
-        curr = curr->parent;
+        curr = curr->parent.get();
       }
       fl_line_style(FL_SOLID, 0); // Reset
     }

@@ -46,7 +46,7 @@ Context(GraphTests) {
     }
 
     Spec(CheapestPath) {
-        Waypoint* result = g.search(v1, v3, CHEAPEST);
+        std::shared_ptr<Waypoint> result = g.search(v1, v3, CHEAPEST);
         Assert::That(result != nullptr);
         Assert::That(result->totalCost, Equals(20));
         Assert::That(result->vertex->data, Equals("C"));
@@ -57,7 +57,7 @@ Context(GraphTests) {
     }
 
     Spec(FastestPath) {
-        Waypoint* result = g.search(v1, v3, FASTEST);
+        std::shared_ptr<Waypoint> result = g.search(v1, v3, FASTEST);
         Assert::That(result != nullptr);
         Assert::That(result->totalTime, Equals(10));
         
@@ -71,7 +71,7 @@ Context(GraphTests) {
         // A -> C: Cost 200, Time 200
         g.addDirectedEdge(v1, v3, 200, 200);
         
-        Waypoint* result = g.search(v1, v3, LEAST_STOPS);
+        std::shared_ptr<Waypoint> result = g.search(v1, v3, LEAST_STOPS);
         Assert::That(result != nullptr);
         Assert::That(result->stops, Equals(1)); // Direct flight is 1 stop
         
@@ -83,8 +83,8 @@ Context(GraphTests) {
         Vertex* isolated = new Vertex("Isolated");
         g.addVertex(isolated);
         
-        Waypoint* result = g.search(v1, isolated, CHEAPEST);
-        Assert::That(result, IsNull());
+        std::shared_ptr<Waypoint> result = g.search(v1, isolated, CHEAPEST);
+        Assert::That(result == nullptr);
         // Note: isolated vertex is cleaned up by TearDown via cleanupGraph
     }
 };
@@ -120,13 +120,13 @@ Context(GraphBFSTests) {
     }
 
     Spec(BFSFindsPath) {
-        Waypoint* result = g.bfs(v1, v3);
+        std::shared_ptr<Waypoint> result = g.bfs(v1, v3);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("C"));
     }
 
     Spec(BFSFindsDirectNeighbor) {
-        Waypoint* result = g.bfs(v1, v2);
+        std::shared_ptr<Waypoint> result = g.bfs(v1, v2);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("B"));
         Assert::That(result->parent->vertex->data, Equals("A"));
@@ -135,12 +135,12 @@ Context(GraphBFSTests) {
     Spec(BFSNoPath) {
         Vertex* isolated = new Vertex("Isolated");
         g.addVertex(isolated);
-        Waypoint* result = g.bfs(v1, isolated);
-        Assert::That(result, IsNull());
+        std::shared_ptr<Waypoint> result = g.bfs(v1, isolated);
+        Assert::That(result == nullptr);
     }
 
     Spec(BFSSameStartEnd) {
-        Waypoint* result = g.bfs(v1, v1);
+        std::shared_ptr<Waypoint> result = g.bfs(v1, v1);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("A"));
     }
@@ -176,13 +176,13 @@ Context(GraphDFSTests) {
     }
 
     Spec(DFSFindsPath) {
-        Waypoint* result = g.dfs(v1, v3);
+        std::shared_ptr<Waypoint> result = g.dfs(v1, v3);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("C"));
     }
 
     Spec(DFSFindsDirectNeighbor) {
-        Waypoint* result = g.dfs(v1, v2);
+        std::shared_ptr<Waypoint> result = g.dfs(v1, v2);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("B"));
     }
@@ -190,12 +190,12 @@ Context(GraphDFSTests) {
     Spec(DFSNoPath) {
         Vertex* isolated = new Vertex("Isolated");
         g.addVertex(isolated);
-        Waypoint* result = g.dfs(v1, isolated);
-        Assert::That(result, IsNull());
+        std::shared_ptr<Waypoint> result = g.dfs(v1, isolated);
+        Assert::That(result == nullptr);
     }
 
     Spec(DFSSameStartEnd) {
-        Waypoint* result = g.dfs(v1, v1);
+        std::shared_ptr<Waypoint> result = g.dfs(v1, v1);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("A"));
     }
@@ -240,12 +240,11 @@ Context(GraphEdgeCases) {
 
     Spec(WaypointInitialization) {
         Vertex* v = new Vertex("Test");
-        Waypoint* wp = new Waypoint(v);
-        Assert::That(wp->parent, IsNull());
+        std::shared_ptr<Waypoint> wp = std::make_shared<Waypoint>(v);
+        Assert::That(wp->parent == nullptr);
         Assert::That(wp->totalCost, Equals(0));
         Assert::That(wp->totalTime, Equals(0));
         Assert::That(wp->stops, Equals(0));
-        delete wp;
         delete v;
     }
 
@@ -275,7 +274,7 @@ Context(GraphEdgeCases) {
         g.addVertex(v2);
         g.addDirectedEdge(v1, v2, 10, 20);
         
-        Waypoint* result = g.ucs(v1, v2);
+        std::shared_ptr<Waypoint> result = g.ucs(v1, v2);
         Assert::That(result != nullptr);
         Assert::That(result->vertex->data, Equals("B"));
     }
@@ -325,7 +324,7 @@ Context(ComplexGraphTests) {
 
     Spec(CheapestNYCtoLAX) {
         // Cheapest: NYC -> ORD -> DEN -> LAX = $150 + $100 + $120 = $370
-        Waypoint* result = g.search(nyc, lax, CHEAPEST);
+        std::shared_ptr<Waypoint> result = g.search(nyc, lax, CHEAPEST);
         Assert::That(result != nullptr);
         Assert::That(result->totalCost, Equals(370));
     }
@@ -333,14 +332,14 @@ Context(ComplexGraphTests) {
     Spec(FastestNYCtoLAX) {
         // Fastest: NYC -> LAX direct = 300min (5hr)
         // Other paths take longer, so direct is optimal
-        Waypoint* result = g.search(nyc, lax, FASTEST);
+        std::shared_ptr<Waypoint> result = g.search(nyc, lax, FASTEST);
         Assert::That(result != nullptr);
         Assert::That(result->totalTime, Equals(300));
     }
 
     Spec(LeastStopsNYCtoLAX) {
         // Direct flight NYC -> LAX is 1 stop
-        Waypoint* result = g.search(nyc, lax, LEAST_STOPS);
+        std::shared_ptr<Waypoint> result = g.search(nyc, lax, LEAST_STOPS);
         Assert::That(result != nullptr);
         Assert::That(result->stops, Equals(1));
         Assert::That(result->parent->vertex->data, Equals("NYC"));

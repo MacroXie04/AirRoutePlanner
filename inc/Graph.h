@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <ostream>
 #include <string>
+#include <memory>
+#include <vector>
 
 enum SearchCriteria { CHEAPEST, FASTEST, LEAST_STOPS };
 
@@ -72,10 +74,9 @@ inline Vertex::~Vertex() {
     }
 }
 
-struct Waypoint {
-    Waypoint *parent;
+struct Waypoint : public std::enable_shared_from_this<Waypoint> {
+    std::shared_ptr<Waypoint> parent;
     Vertex *vertex;
-    ArrayList<Waypoint *> children;
     int partialCost;
     int weight;
     
@@ -83,7 +84,6 @@ struct Waypoint {
     int totalCost;
     int totalTime;
     int stops;
-    bool keep;
 
     Waypoint(Vertex *v) {
         parent = nullptr;
@@ -93,14 +93,14 @@ struct Waypoint {
         totalCost = 0;
         totalTime = 0;
         stops = 0;
-        keep = false;
     }
 
-    void expand(SearchCriteria criteria = CHEAPEST) {
+    std::vector<std::shared_ptr<Waypoint>> expand(SearchCriteria criteria = CHEAPEST) {
+        std::vector<std::shared_ptr<Waypoint>> children;
         for (int i = 0; i < vertex->edgeList.size(); i++) {
             Edge* e = vertex->edgeList[i];
-            Waypoint *temp = new Waypoint(e->to);
-            temp->parent = this;
+            std::shared_ptr<Waypoint> temp = std::make_shared<Waypoint>(e->to);
+            temp->parent = shared_from_this();
             
             temp->totalCost = totalCost + e->cost;
             temp->totalTime = totalTime + e->duration;
@@ -117,8 +117,9 @@ struct Waypoint {
             
             temp->weight = e->weight;
 
-            children.append(temp);
+            children.push_back(temp);
         }
+        return children;
     }
 };
 
@@ -158,41 +159,26 @@ struct Graph {
         addEdge(x, y, w, 0);
     }
 
-    Waypoint *bfs(Vertex *start, Vertex *destination) {
+    std::shared_ptr<Waypoint> bfs(Vertex *start, Vertex *destination) {
         std::cout << "Running Breadth-First Search" << std::endl;
-        Queue<Waypoint *> frontier;
+        Queue<std::shared_ptr<Waypoint>> frontier;
         HashTable<std::string> seen;
-        ArrayList<Waypoint *> allWaypoints;
 
-        Waypoint *first = new Waypoint(start);
-        allWaypoints.append(first);
+        std::shared_ptr<Waypoint> first = std::make_shared<Waypoint>(start);
 
         frontier.enqueue(first);
         seen.insert(first->vertex->data);
 
-        Waypoint *result = nullptr;
+        std::shared_ptr<Waypoint> result = nullptr;
 
         while (!frontier.isEmpty()) {
             result = frontier.dequeue();
 
             if (result->vertex == destination) {
-                Waypoint *curr = result;
-                while (curr != nullptr) {
-                    curr->keep = true;
-                    curr = curr->parent;
-                }
-                for (int i = 0; i < allWaypoints.size(); i++) {
-                    if (!allWaypoints[i]->keep) {
-                        delete allWaypoints[i];
-                    }
-                }
                 return result;
             }
 
-            result->expand();
-            for (int i = 0; i < result->children.size(); i++) {
-                allWaypoints.append(result->children[i]);
-            }
+            std::vector<std::shared_ptr<Waypoint>> children = result->expand();
             // Get the neighbors of the current vertex
             // that we are on...
 
@@ -200,22 +186,22 @@ struct Graph {
             std::cout << std::endl
                       << "Expanding " << result->vertex->data << std::endl;
 
-            for (int i = 0; i < result->children.size(); i++) {
+            for (auto& child : children) {
                 // For every child of the result node
                 // If we have not seen it
                 // We add it to the frontier (as a queue)
                 // We mark it as seen
-                if (!seen.search(result->children[i]->vertex->data)) {
-                    std::cout << "Adding " << result->children[i]->vertex->data
+                if (!seen.search(child->vertex->data)) {
+                    std::cout << "Adding " << child->vertex->data
                               << std::endl;
-                    frontier.enqueue(result->children[i]);
-                    seen.insert(result->children[i]->vertex->data);
+                    frontier.enqueue(child);
+                    seen.insert(child->vertex->data);
                 }
             }
 
             std::cout << std::endl << "Frontier" << std::endl;
 
-            Link<Waypoint *> *temp = frontier.list.front;
+            Link<std::shared_ptr<Waypoint>> *temp = frontier.list.front;
             while (temp != nullptr) {
                 std::cout << "(" << temp->data->vertex->data << ","
                           << temp->data->partialCost << ")";
@@ -230,65 +216,46 @@ struct Graph {
             std::cout << std::endl;
         }
 
-        for (int i = 0; i < allWaypoints.size(); i++) {
-            delete allWaypoints[i];
-        }
-
         return nullptr;
     }
 
-    Waypoint *dfs(Vertex *start, Vertex *destination) {
+    std::shared_ptr<Waypoint> dfs(Vertex *start, Vertex *destination) {
         std::cout << "Running Depth-First Search" << std::endl;
 
-        Stack<Waypoint *> frontier;
+        Stack<std::shared_ptr<Waypoint>> frontier;
         HashTable<std::string> seen;
-        ArrayList<Waypoint *> allWaypoints;
 
-        Waypoint *first = new Waypoint(start);
-        allWaypoints.append(first);
+        std::shared_ptr<Waypoint> first = std::make_shared<Waypoint>(start);
 
         frontier.push(first);
         seen.insert(first->vertex->data);
 
-        Waypoint *result = nullptr;
+        std::shared_ptr<Waypoint> result = nullptr;
 
         while (!frontier.isEmpty()) {
             result = frontier.pop();
 
             if (result->vertex == destination) {
-                Waypoint *curr = result;
-                while (curr != nullptr) {
-                    curr->keep = true;
-                    curr = curr->parent;
-                }
-                for (int i = 0; i < allWaypoints.size(); i++) {
-                    if (!allWaypoints[i]->keep) {
-                        delete allWaypoints[i];
-                    }
-                }
                 return result;
             }
 
-            result->expand();
-            for (int i = 0; i < result->children.size(); i++) {
-                allWaypoints.append(result->children[i]);
-            }
+            std::vector<std::shared_ptr<Waypoint>> children = result->expand();
 
             std::cout << std::endl
                       << "Expanding " << result->vertex->data << std::endl;
 
-            for (int i = 0; i < result->children.size(); i++) {
-                if (!seen.search(result->children[i]->vertex->data)) {
-                    std::cout << "Adding " << result->children[i]->vertex->data
+            for (auto& child : children) {
+                if (!seen.search(child->vertex->data)) {
+                    std::cout << "Adding " << child->vertex->data
                               << std::endl;
-                    frontier.push(result->children[i]);
-                    seen.insert(result->children[i]->vertex->data);
+                    frontier.push(child);
+                    seen.insert(child->vertex->data);
                 }
             }
 
             std::cout << std::endl << "Frontier" << std::endl;
 
-            Link<Waypoint *> *temp = frontier.front;
+            Link<std::shared_ptr<Waypoint>> *temp = frontier.front;
             while (temp != nullptr) {
                 std::cout << "(" << temp->data->vertex->data << ","
                           << temp->data->partialCost << ")";
@@ -303,60 +270,41 @@ struct Graph {
             std::cout << std::endl;
         }
 
-        for (int i = 0; i < allWaypoints.size(); i++) {
-            delete allWaypoints[i];
-        }
-
         return nullptr;
     }
 
-    Waypoint *search(Vertex *start, Vertex *destination, SearchCriteria criteria) {
+    std::shared_ptr<Waypoint> search(Vertex *start, Vertex *destination, SearchCriteria criteria) {
         std::cout << "Running Search (UCS variant)" << std::endl;
 
         // Should be a priority queue
-        ArrayList<Waypoint *> frontier;
+        ArrayList<std::shared_ptr<Waypoint>> frontier;
         HashTable<std::string> seen;
-        ArrayList<Waypoint *> allWaypoints;
 
-        Waypoint *first = new Waypoint(start);
-        allWaypoints.append(first);
+        std::shared_ptr<Waypoint> first = std::make_shared<Waypoint>(start);
 
         frontier.append(first);
         seen.insert(first->vertex->data);
 
-        Waypoint *result = nullptr;
+        std::shared_ptr<Waypoint> result = nullptr;
 
         while (frontier.size() != 0) {
             result = frontier.removeLast();
 
             if (result->vertex == destination) {
-                Waypoint *curr = result;
-                while (curr != nullptr) {
-                    curr->keep = true;
-                    curr = curr->parent;
-                }
-                for (int i = 0; i < allWaypoints.size(); i++) {
-                    if (!allWaypoints[i]->keep) {
-                        delete allWaypoints[i];
-                    }
-                }
                 return result;
             }
 
-            result->expand(criteria);
-            for (int i = 0; i < result->children.size(); i++) {
-                allWaypoints.append(result->children[i]);
-            }
+            std::vector<std::shared_ptr<Waypoint>> children = result->expand(criteria);
 
             std::cout << "Expanding " << result->vertex->data << std::endl;
 
-            for (int i = 0; i < result->children.size(); i++) {
+            for (auto& child : children) {
                 // Look at each child
-                if (!seen.search(result->children[i]->vertex->data)) {
+                if (!seen.search(child->vertex->data)) {
                     // If not in the seen list, let's add it
-                    std::cout << "Adding " << result->children[i]->vertex->data
+                    std::cout << "Adding " << child->vertex->data
                               << std::endl;
-                    frontier.append(result->children[i]);
+                    frontier.append(child);
 
 
                     // Sort the frontier....
@@ -364,25 +312,25 @@ struct Graph {
                     while (j > 0 && frontier.data[j]->partialCost >
                                         frontier.data[j - 1]->partialCost) {
 
-                        Waypoint *temp = frontier.data[j];
+                        std::shared_ptr<Waypoint> temp = frontier.data[j];
                         frontier.data[j] = frontier.data[j - 1];
                         frontier.data[j - 1] = temp;
                         j--;
                     }
 
-                    seen.insert(result->children[i]->vertex->data);
+                    seen.insert(child->vertex->data);
                 } else {
                     // If it is in the seen list, we may have to do some work
 
                     // First we will check if it is still in the frontier but
                     // with a higher partial cost
-                    Waypoint *worsePath = nullptr;
+                    std::shared_ptr<Waypoint> worsePath = nullptr;
 
                     for (int k = 0; k < frontier.size(); k++) {
                         if (frontier[k]->vertex->data ==
-                            result->children[i]->vertex->data) {
+                            child->vertex->data) {
                             if (frontier[k]->partialCost >
-                                result->children[i]->partialCost) {
+                                child->partialCost) {
                                 worsePath = frontier[k];
                                 // The same node was visited before,
                                 // but with a higher partial cost
@@ -395,25 +343,25 @@ struct Graph {
                     if (worsePath) {
                         std::cout
                             << "Found another way to get to "
-                            << result->children[i]->vertex->data << ". Was "
+                            << child->vertex->data << ". Was "
                             << worsePath->partialCost << ", but now it is "
-                            << result->children[i]->partialCost << std::endl;
+                            << child->partialCost << std::endl;
 
                         // Make it so that the children of the worse waypoint
                         // become our children
                         for (int k = 0; k < frontier.size(); k++) {
                             if (frontier[k]->parent->vertex->data ==
-                                result->children[i]->vertex->data) {
-                                frontier[k]->parent = result->children[i];
+                                child->vertex->data) {
+                                frontier[k]->parent = child;
                             }
                         }
 
                         // Replace the worse one with the better one
                         for (int k = 0; k < frontier.size(); k++) {
                             if (frontier[k]->vertex->data ==
-                                result->children[i]->vertex->data) {
+                                child->vertex->data) {
                                 // delete frontier[k];
-                                frontier[k] = result->children[i];
+                                frontier[k] = child;
                                 break;
                             }
                         }
@@ -424,7 +372,7 @@ struct Graph {
                             int b = a;
                             while (b > 0 && frontier[b]->partialCost >
                                                 frontier[b - 1]->partialCost) {
-                                Waypoint *x = frontier[b];
+                                std::shared_ptr<Waypoint> x = frontier[b];
                                 frontier[b] = frontier[b - 1];
                                 frontier[b - 1] = x;
                                 b--;
@@ -448,15 +396,11 @@ struct Graph {
             std::cout << std::endl;
         }
 
-        for (int i = 0; i < allWaypoints.size(); i++) {
-            delete allWaypoints[i];
-        }
-
         return nullptr;
     }
 
     // Keep legacy UCS for compatibility if needed, but it calls search with default
-    Waypoint *ucs(Vertex *start, Vertex *destination) {
+    std::shared_ptr<Waypoint> ucs(Vertex *start, Vertex *destination) {
         return search(start, destination, CHEAPEST);
     }
 };

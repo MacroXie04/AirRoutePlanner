@@ -8,6 +8,7 @@
 #include <list_box.h>
 #include <map>
 #include <vector>
+#include <memory>
 
 using namespace std;
 using namespace bobcat;
@@ -22,7 +23,7 @@ extern std::map<int, Vertex *> airportMap;
 extern std::vector<AirportData> dbAirports;
 extern std::vector<RouteData> dbRoutes;
 extern DatabaseManager db;
-extern Waypoint *currentPath;
+extern std::shared_ptr<Waypoint> currentPath;
 
 // UI components that need global access
 extern Dropdown *fromDd;

@@ -7,8 +7,8 @@
 #include <dropdown.h>
 #include <list_box.h>
 #include <map>
-#include <vector>
 #include <memory>
+#include <vector>
 
 using namespace std;
 using namespace bobcat;

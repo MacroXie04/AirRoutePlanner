@@ -23,7 +23,7 @@ BIN_DIR      := $(LOCAL_BIN)
 OUT          := $(BIN_DIR)/$(APP)
 TEST_OUT     := $(BIN_DIR)/$(TEST)
 DB_FILE      := db/data.db
-DB_SEED      := db/seed.sql
+DB_SEED      := db/seed_output.sql
 
 MAKEFLAGS   += --no-print-directory
 
@@ -63,7 +63,8 @@ $(LOCAL_BIN_DIR):
 run: all
 	@if [ ! -f $(DB_FILE) ]; then \
 		echo "Database not found at $(DB_FILE). Creating..."; \
-		sqlite3 $(DB_FILE) < $(DB_SEED); \
+		./sql_seed_generation.sh ./assets/edges.txt ./assets/vertices.txt && \
+		sqlite3 $(DB_FILE) < $(DB_SEED) && \
 		echo "Database initialized at $(DB_FILE)"; \
 	fi
 	@if command -v clear >/dev/null 2>&1 && [ -n "$$TERM" ] && [ "$$TERM" != "dumb" ]; then clear; fi
@@ -74,13 +75,15 @@ init_db:
 		read -p "Database already exists. Do you want to overwrite it? [y/N] " answer; \
 		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
 			rm -f $(DB_FILE); \
-			sqlite3 $(DB_FILE) < $(DB_SEED); \
+		    ./sql_seed_generation.sh ./assets/edges.txt ./assets/vertices.txt && \
+		    sqlite3 $(DB_FILE) < $(DB_SEED); \
 			echo "Database initialized at $(DB_FILE)"; \
 		else \
 			echo "Operation cancelled."; \
 		fi; \
 	else \
-		sqlite3 $(DB_FILE) < $(DB_SEED); \
+	    ./sql_seed_generation.sh "./assets/edges.txt" "./assets/vertices.txt" &&\
+		sqlite3 $(DB_FILE) < $(DB_SEED) && \
 		echo "Database initialized at $(DB_FILE)"; \
 	fi
 
@@ -102,6 +105,7 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rmdir $(LOCAL_BIN_DIR) 2> /dev/null || true
 	rm -f $(DB_FILE)
+	rm -f $(DB_SEED)
 
 .PHONY: all run test autograde clean lint memcheck format init_db
 

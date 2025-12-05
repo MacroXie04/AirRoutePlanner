@@ -1,6 +1,5 @@
 //
-// Original Bobcat UI Library
-// Modified by Hongzhe Xie
+// Create by Hongzhe Xie
 //
 
 #ifndef BOBCAT_UI_IMAGE

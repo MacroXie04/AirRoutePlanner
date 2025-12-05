@@ -36,18 +36,27 @@ public:
       }
     }
 
-    // Highlight path if exists
-    if (currentPath) {
-      fl_color(FL_RED);
-      fl_line_style(FL_SOLID, 3);
-      Waypoint *curr = currentPath.get();
-      while (curr && curr->parent) {
-        fl_line(ox + curr->vertex->x, oy + curr->vertex->y,
-                ox + curr->parent->vertex->x, oy + curr->parent->vertex->y);
-        curr = curr->parent.get();
+    // Colors for different paths
+    Fl_Color pathColors[] = {FL_RED, fl_rgb_color(0, 150, 0), FL_BLUE,
+                             fl_rgb_color(255, 128, 0), FL_MAGENTA};
+    int numColors = 5;
+
+    // Highlight all paths if any exist
+    for (size_t pathIdx = 0; pathIdx < currentPaths.size(); pathIdx++) {
+      const auto &path = currentPaths[pathIdx];
+      if (path) {
+        // Use different colors for different paths
+        fl_color(pathColors[pathIdx % numColors]);
+        fl_line_style(FL_SOLID, 3);
+        Waypoint *curr = path.get();
+        while (curr && curr->parent) {
+          fl_line(ox + curr->vertex->x, oy + curr->vertex->y,
+                  ox + curr->parent->vertex->x, oy + curr->parent->vertex->y);
+          curr = curr->parent.get();
+        }
       }
-      fl_line_style(FL_SOLID, 0); // Reset
     }
+    fl_line_style(FL_SOLID, 0); // Reset
 
     // Draw airports (nodes)
     for (int i = 0; i < airports.size(); i++) {

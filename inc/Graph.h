@@ -396,6 +396,94 @@ struct Graph {
   std::shared_ptr<Waypoint> ucs(Vertex *start, Vertex *destination) {
     return search(start, destination, CHEAPEST);
   }
+
+  // Search for ALL optimal paths with the same cost
+  std::vector<std::shared_ptr<Waypoint>>
+  searchAll(Vertex *start, Vertex *destination, SearchCriteria criteria) {
+    std::vector<std::shared_ptr<Waypoint>> allPaths;
+
+    // First, find the optimal cost using standard search
+    std::shared_ptr<Waypoint> optimalPath = search(start, destination, criteria);
+    if (!optimalPath) {
+      return allPaths; // No path found
+    }
+
+    int optimalCost = optimalPath->partialCost;
+    allPaths.push_back(optimalPath);
+
+    // Now do a complete search to find ALL paths with the same optimal cost
+    // Using DFS to explore all possible paths
+    Stack<std::shared_ptr<Waypoint>> frontier;
+    std::shared_ptr<Waypoint> first = std::make_shared<Waypoint>(start);
+    frontier.push(first);
+
+    while (!frontier.isEmpty()) {
+      std::shared_ptr<Waypoint> current = frontier.pop();
+
+      // If we've exceeded the optimal cost, skip this path
+      if (current->partialCost > optimalCost) {
+        continue;
+      }
+
+      // If we reached the destination with optimal cost
+      if (current->vertex == destination &&
+          current->partialCost == optimalCost) {
+        // Check if this is a different path (not already in allPaths)
+        bool isDuplicate = false;
+        for (const auto &existingPath : allPaths) {
+          if (isSamePath(current, existingPath)) {
+            isDuplicate = true;
+            break;
+          }
+        }
+        if (!isDuplicate) {
+          allPaths.push_back(current);
+        }
+        continue;
+      }
+
+      // Expand children
+      std::vector<std::shared_ptr<Waypoint>> children =
+          current->expand(criteria);
+
+      for (auto &child : children) {
+        // Avoid cycles: check if vertex is already in current path
+        bool inCurrentPath = false;
+        std::shared_ptr<Waypoint> pathCheck = current;
+        while (pathCheck != nullptr) {
+          if (pathCheck->vertex == child->vertex) {
+            inCurrentPath = true;
+            break;
+          }
+          pathCheck = pathCheck->parent;
+        }
+
+        if (!inCurrentPath && child->partialCost <= optimalCost) {
+          frontier.push(child);
+        }
+      }
+    }
+
+    return allPaths;
+  }
+
+private:
+  // Helper to check if two paths are the same
+  bool isSamePath(const std::shared_ptr<Waypoint> &p1,
+                  const std::shared_ptr<Waypoint> &p2) {
+    std::shared_ptr<Waypoint> c1 = p1;
+    std::shared_ptr<Waypoint> c2 = p2;
+
+    while (c1 != nullptr && c2 != nullptr) {
+      if (c1->vertex != c2->vertex) {
+        return false;
+      }
+      c1 = c1->parent;
+      c2 = c2->parent;
+    }
+
+    return (c1 == nullptr && c2 == nullptr);
+  }
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Graph &g) {

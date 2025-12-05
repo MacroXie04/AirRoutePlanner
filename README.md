@@ -87,22 +87,17 @@ AirRoutePlanner/
 │   └── MapWidget.h       # Custom widget for map visualization
 ├── inc/
 │   ├── Graph.h           # Graph data structure with search algorithms
-│   ├── DatabaseManager.h # SQLite database operations
 │   ├── ArrayList.h       # Dynamic array implementation
 │   ├── LinkedList.h      # Linked list implementation
 │   ├── Queue.h           # Queue for BFS
 │   ├── Stack.h           # Stack for DFS
 │   └── HashTable.h       # Hash table for visited nodes
-├── bobcat_ui/            # Bobcat UI framework headers (FLTK wrapper)
-├── db/
-│   ├── seed.sql          # Database schema and sample data
-│   └── data.db           # SQLite database file (generated)
+├── bobcat_ui/            # Bobcat UI Framework (FLTK wrapper)\
 ├── test/
-│   └── test.cpp          # Unit tests
+│   └── test_*.cpp        # Unit tests
 ├── bin/                  # Compiled binaries (generated)
 ├── objects/              # Object files (generated)
 ├── Makefile              # Build configuration
-├── Dockerfile            # Docker container setup
 └── Screenshot.png        # Application screenshot
 ```
 

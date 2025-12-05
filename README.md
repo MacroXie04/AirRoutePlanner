@@ -24,25 +24,15 @@ A desktop application for planning optimal air travel routes between airports. B
 
 ### macOS
 ```bash
-brew install fltk sqlite3
+brew install fltk
 ```
 
 ### Linux (Debian/Ubuntu)
 ```bash
-sudo apt-get install libfltk1.3-dev libsqlite3-dev
+sudo apt-get install libfltk1.3-dev
 ```
 
 ## Getting Started
-
-### Build the Application
-```bash
-make
-```
-
-### Initialize the Database
-```bash
-make init_db
-```
 
 ### Run the Application
 ```bash
